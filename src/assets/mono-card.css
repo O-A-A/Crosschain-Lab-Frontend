@@ -1,0 +1,20 @@
+/* 全局单色卡片（主题自适应） */
+.v-card.mono-card {
+    --bg: rgb(var(--v-theme-on-surface));        /* 浅色：白底；深色：深底 */
+    --fg: rgb(var(--v-theme-surface));     /* 浅色：深字；深色：浅字 */
+  
+    background-color: var(--bg) !important;
+    color: var(--fg) !important;
+    border-radius: 12px;
+    border: 1px solid rgb(var(--v-theme-outline));
+  }
+  
+  /* 标题、内容文字都跟随主题 */
+  .v-card.mono-card .ts-label {
+    color: var(--fg) !important;
+  }
+  
+  .v-card.mono-card .ts-value {
+    color: var(--fg) !important;
+  }
+  

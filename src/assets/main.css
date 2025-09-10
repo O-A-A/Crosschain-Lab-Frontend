@@ -1,0 +1,21 @@
+#app {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;            /* 🔧 去掉左右 2rem 的留白来源 */
+  display: flex;
+  flex-direction: column; /* 更贴合 v-app 的纵向布局 */
+}
+
+/* ≥1024px 也不要再加左右 padding */
+@media (min-width: 1024px) {
+  body {
+    display: block;       /* 避免额外的居中影响 */
+    place-items: initial;
+  }
+  #app {
+    display: block;       /* 或保持 flex 均可 */
+    padding: 0;           /* 🔧 保持 0 */
+    width: 100%;
+  }
+}

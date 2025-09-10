@@ -1,0 +1,36 @@
+/* ====== 全局单色按钮（原生风格 + 主题自适应）====== */
+.v-btn.mono-btn {
+  /* 浅色主题时近似黑底，深色主题时近似白底 */
+  --bg: rgb(var(--v-theme-on-surface));
+  --fg: rgb(var(--v-theme-surface));
+
+  background-color: var(--bg) !important;
+  color: var(--fg) !important;
+  border: none !important;                  /* 和原生一致：无边框 */
+  font-weight: 600;                          /* 原生按钮字重 */
+  font-size: 1rem;                           /* 保持原生大小 */
+  border-radius: 10px !important;            /* 圆角 10px */
+  padding: 10px 14px !important;             /* 原生内边距 */
+  min-height: unset !important;
+  height: auto !important;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background-color .2s ease, filter .2s ease;
+}
+
+/* 悬停状态：略微变浅或变深，保持黑白风格 */
+.v-btn.mono-btn:hover {
+  background-color: rgb(var(--v-theme-surface-variant)) !important;
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+/* 按下态：稍微压暗 */
+.v-btn.mono-btn:active {
+  filter: brightness(0.92);
+}
+
+/* 禁用态 */
+.v-btn.mono-btn.v-btn--disabled {
+  opacity: var(--v-disabled-opacity, 0.38);
+  cursor: not-allowed;
+}
