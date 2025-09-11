@@ -60,9 +60,9 @@ export const useExperimentStore = defineStore('experiment', {
       this.error = '';
       this.systemMessage = '';
       this.runId = 'local'; // 本地 runId
-
+    
       try {
-        const res = await api.startSystem();
+        const res = await api.startSystem();  // 这里会触发一次 /start 请求
         this.systemMessage = res?.message ?? 'System started';
         this.status = 'running';
       } catch (e: any) {

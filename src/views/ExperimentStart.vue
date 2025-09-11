@@ -27,37 +27,48 @@ async function handleChangeParams(p: ExperimentParams) {
       { chain: 'dst_chain', param: 'TotalDataSize',       value: Number(p.totalDataSize_dst) },
     ] as const;
 
-    for (const op of ops) await changeParam(op);
+    for (const op of ops) {
+      // 在发送每个请求前打印日志
+      console.log(`正在发送请求：链: ${op.chain}, 参数: ${op.param}, 值: ${op.value}`);
+
+      const response = await changeParam(op);
+
+      // 打印每次请求的响应
+      console.log(`参数 ${op.param} 的响应:`, response);
+    }
 
     // —— 读回确认（强烈建议先做一次）
     const [srcNow, dstNow] = await Promise.all([
       getParams('src_chain'),
       getParams('dst_chain'),
     ]);
-    console.log('[verify]', srcNow.data, dstNow.data);
+    console.log('[verify] src_chain 参数:', srcNow.data);
+    console.log('[verify] dst_chain 参数:', dstNow.data);
 
     // —— 全部 OK 后再写入 store，避免触发 watcher 并发写
     store.$patch({ params: p });
 
   } catch (e) {
-    console.error('[change] fail:', e);
+    console.error('[change] 发生错误:', e);
   } finally {
     changing = false;
   }
 }
 /** 启动实验：设置运行状态 → 启动后端 → 伪流推送 → 跳转 /flow */
+let isRequesting = false;
+
 async function handleStart(p: ExperimentParams) {
+  if (isRequesting) return;  // 防止重复提交
+  isRequesting = true;
+
   try {
-    store.start(p);        // 标记运行中 & 保存参数
-    await startSystem();   // 真正启动后端（连上 WS 后替换 mock）
-
-    // 这里开始发“伪实时数据”，等你接上后端/WS后替换
-    mockStream();
-
-    router.push('/flow');
+    await store.start(p);  // 只调用 store.start(p)，内部已经处理了请求
+    router.push({ name: 'flow' });  // 页面跳转
   } catch (err) {
-    console.error('[start] 启动失败：', err);
+    console.error('[start] 启动流程异常：', err);
     store.finish();
+  } finally {
+    isRequesting = false;  // 恢复按钮状态
   }
 }
 

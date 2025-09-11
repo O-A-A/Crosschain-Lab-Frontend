@@ -156,8 +156,7 @@ const params = ref<ExperimentParams>({
 // 勾选同步时，保持 *_dst 与 *_src 一致
 watch(
   [
-    () => params.value.blockInterval_src,
-    () => params.value.maxBlockSize_src,
+    
     () => params.value.injectSpeed_src,
     () => params.value.totalDataSize_src,
     syncDst,
@@ -165,8 +164,7 @@ watch(
   () => {
     if (!syncDst.value) return
     const p = params.value
-    p.blockInterval_dst  = p.blockInterval_src
-    p.maxBlockSize_dst   = p.maxBlockSize_src
+    
     p.injectSpeed_dst    = p.injectSpeed_src
     p.totalDataSize_dst  = p.totalDataSize_src
   },
@@ -177,8 +175,7 @@ watch(
 function syncNow() {
   if (!syncDst.value) return
   const p = params.value
-  p.blockInterval_dst  = p.blockInterval_src
-  p.maxBlockSize_dst   = p.maxBlockSize_src
+ 
   p.injectSpeed_dst    = p.injectSpeed_src
   p.totalDataSize_dst  = p.totalDataSize_src
 }

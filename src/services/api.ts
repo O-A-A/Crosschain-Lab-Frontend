@@ -31,7 +31,6 @@ export async function startSystem(): Promise<{ message: string }> {
     throw new Error(toErrorMessage(err));
   }
 }
-
 /**
  * 停止所有链节点
  * POST /stop
