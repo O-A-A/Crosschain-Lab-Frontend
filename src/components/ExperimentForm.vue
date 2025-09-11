@@ -78,7 +78,7 @@
             <!-- 修改 Inject Speed（源链） -->
             <v-text-field
               label="Inject Speed（源链）"
-              v-model="params.injectSpeed"
+              v-model="params.injectSpeed_src"
               type="number"
               variant="outlined"
               density="default"
@@ -88,7 +88,7 @@
             <!-- 修改 Total Data Size（源链和目标链） -->
             <v-text-field
               label="Total Data Size（源链和目标链）"
-              v-model="params.totalDataSize"
+              v-model="params.totalDataSize_src"
               type="number"
               variant="outlined"
               density="default"
@@ -126,9 +126,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref,watch  } from 'vue'
 import type { ExperimentParams } from '../types'
-
+const syncDst = ref(true); // ✅ 勾选后把 src 值同步到 dst
 const emit = defineEmits<{
   /** 修改参数事件 */
   (e: 'change', value: ExperimentParams): void
@@ -142,16 +142,50 @@ const params = ref<ExperimentParams>({
   txCount: 3000,
   intervalMs: 300,
   protocol: 'CCP',
+
   blockInterval_src: '5000',
   blockInterval_dst: '5000',
   maxBlockSize_src: '2000',
   maxBlockSize_dst: '2000',
-  injectSpeed: '8000',
-  totalDataSize: '1',
+  injectSpeed_src: '8000',
+  injectSpeed_dst: '8000',      // ✅ 补上
+  totalDataSize_src: '1',
+  totalDataSize_dst: '1',       // ✅ 补上
 })
+
+// 勾选同步时，保持 *_dst 与 *_src 一致
+watch(
+  [
+    () => params.value.blockInterval_src,
+    () => params.value.maxBlockSize_src,
+    () => params.value.injectSpeed_src,
+    () => params.value.totalDataSize_src,
+    syncDst,
+  ],
+  () => {
+    if (!syncDst.value) return
+    const p = params.value
+    p.blockInterval_dst  = p.blockInterval_src
+    p.maxBlockSize_dst   = p.maxBlockSize_src
+    p.injectSpeed_dst    = p.injectSpeed_src
+    p.totalDataSize_dst  = p.totalDataSize_src
+  },
+  { immediate: true }
+)
+
+// 提交前再同步一次，确保数据完整
+function syncNow() {
+  if (!syncDst.value) return
+  const p = params.value
+  p.blockInterval_dst  = p.blockInterval_src
+  p.maxBlockSize_dst   = p.maxBlockSize_src
+  p.injectSpeed_dst    = p.injectSpeed_src
+  p.totalDataSize_dst  = p.totalDataSize_src
+}
 
 // 表单提交 -> 仅修改参数
 function onChangeParams() {
+  syncNow()
   emit('change', params.value)
 }
 

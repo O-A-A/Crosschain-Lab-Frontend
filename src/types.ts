@@ -1,6 +1,20 @@
 // Chain 类型只包含 'PoW'（源链和目标链）
 export type Chain = 'PoW';
 
+
+
+export type ChainKey = 'src_chain' | 'dst_chain';
+
+export type AllowedParam =
+  | 'Block_Interval'
+  | 'MaxBlockSize_global'
+  | 'InjectSpeed'
+  | 'TotalDataSize';
+
+
+
+
+
 // 修改 ExperimentParams 以反映新的固定参数
 export interface ExperimentParams {
   srcChain: Chain;    // 源链（固定为 'PoW'）
@@ -14,8 +28,10 @@ export interface ExperimentParams {
   blockInterval_dst: string;  // Block Interval（目标链）
   maxBlockSize_src: string;   // Max Block Size（源链）
   maxBlockSize_dst: string;   // Max Block Size（目标链）
-  injectSpeed: string;        // Inject Speed（源链）
-  totalDataSize: string;      // Total Data Size（源链和目标链）
+  injectSpeed_src: string;        // Inject Speed（源链）
+  injectSpeed_dst: string;        // Inject Speed（目标链）
+  totalDataSize_src: string;      // Total Data Size（源链）
+  totalDataSize_dst: string;      // Total Data Size（目标链）
 }
 
 // ExperimentStatus 状态类型，保持不变

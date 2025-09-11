@@ -1,14 +1,7 @@
 import axios, { AxiosError } from 'axios';
-
+import type { ChainKey, AllowedParam } from '@/types';
 // 定义链类型，源链和目标链
-export type ChainKey = 'src_chain' | 'dst_chain';
 
-// 定义允许修改的参数
-export type AllowedParam =
-  | 'Block_Interval'
-  | 'MaxBlockSize_global'
-  | 'InjectSpeed'
-  | 'TotalDataSize';
 
 // 创建一个 axios 实例，用于请求
 const http = axios.create({
@@ -96,6 +89,15 @@ export async function getTxDetails(tx_hash: string): Promise<Record<string, numb
   try {
     const { data } = await http.get('/tx_details', { params: { tx_hash } });
     return data;
+  } catch (err) {
+    throw new Error(toErrorMessage(err));
+  }
+}
+
+export async function getParams(chain: ChainKey) {
+  try {
+    const { data } = await http.get('/get_params', { params: { chain } });
+    return data; // { Block_Interval, MaxBlockSize_global, InjectSpeed, TotalDataSize, ... }
   } catch (err) {
     throw new Error(toErrorMessage(err));
   }
