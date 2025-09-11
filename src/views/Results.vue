@@ -18,13 +18,22 @@ const summary = computed(() => {
   return { avg, p95, successRate };
 });
 
-function exportCSV() {
-  const header = 't,latencyMs,success\n';
-  const rows = store.data
-    .map(d => `${new Date(d.t).toISOString()},${d.latencyMs},${d.success}`)
-    .join('\n');
-  const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8' });
-  saveAs(blob, `experiment_${store.runId || 'data'}.csv`);
+async function downloadTxDetails() {
+  const res = await fetch('http://localhost:8080/download_tx_details', {
+    method: 'GET',
+    // 若需要携带 cookie 再加：credentials: 'include'
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const blob = await res.blob();
+
+  // 从 Content-Disposition 里取文件名（后端已暴露该响应头）
+  const cd = res.headers.get('content-disposition') || '';
+  const m = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(cd);
+  const raw = m?.[1] || m?.[2] || `Tx_Details_${Date.now()}.csv`;
+  const filename = decodeURIComponent(raw);
+
+  saveAs(blob, filename);
 }
 
 // —— 日志预览（最近 20 行），store.logs 不存在也不报错 ——
@@ -125,8 +134,8 @@ onUnmounted(() => {
     </v-card>
 
     <div class="actions">
-      <v-btn class="mono-btn" @click="exportCSV" :disabled="!store.data.length">
-        导出 CSV
+      <v-btn class="mono-btn" @click="downloadTxDetails" variant="flat">
+        下载 Tx_Details.csv
       </v-btn>
 
       <v-btn class="mono-btn" @click="store.reset()">
