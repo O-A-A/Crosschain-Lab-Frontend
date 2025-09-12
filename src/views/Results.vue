@@ -40,7 +40,11 @@ async function downloadTxDetails() {
 }
 
 // ===== 日志预览（改为从 logStore 取最近 20 行）=====
-const previewLogs = computed(() => logStore.previewLogs);
+//const previewLogs = computed(() => logStore.previewLogs);
+// 分类预览：各取最近 20 行
+const previewTxLogs = computed(() => (logStore.txLogs ?? []).slice(-20));
+const previewNodeLogs = computed(() => (logStore.nodeLogs ?? []).slice(-20));
+const previewSystemLogs = computed(() => (logStore.systemLogs ?? []).slice(-20));
 
 // 点击“刷新”时，保持最近 N 行
 async function refreshLogs() {
@@ -162,26 +166,32 @@ function onImgError(u: string) {
 
     <!-- 日志预览（最近 20 行） -->
     <v-card class="rounded-lg mt-2" elevation="1">
-      <v-card-title class="d-flex align-center">
-        <v-icon class="mr-2">mdi-file-document-outline</v-icon>
-        实验日志（最近 20 行）
-        <v-spacer />
-        <v-btn size="small" variant="text" @click="refreshLogs">
-          刷新
-          <v-icon end size="small">mdi-refresh</v-icon>
-        </v-btn>
-        <v-btn size="small" variant="text" color="primary" to="/logs">
-          查看全部
-          <v-icon end size="small">mdi-chevron-right</v-icon>
-        </v-btn>
-      </v-card-title>
+  <v-card-title class="d-flex align-center">
+    <v-icon class="mr-2">mdi-file-document-outline</v-icon>
+    实验日志（最近 20 行）
+    <v-spacer />
+    <v-btn size="small" variant="text" @click="refreshLogs">
+      刷新
+      <v-icon end size="small">mdi-refresh</v-icon>
+    </v-btn>
+    <v-btn size="small" variant="text" color="primary" to="/logs">
+      查看全部
+      <v-icon end size="small">mdi-chevron-right</v-icon>
+    </v-btn>
+  </v-card-title>
 
-      <v-card-text>
-        <div class="logs">
-          <template v-if="previewLogs.length">
+  <v-card-text>
+    <div class="logs3">
+      <!-- TX -->
+      <section class="log-col">
+        <div class="col-title">
+          <v-icon size="16" class="mr-1">mdi-swap-horizontal</v-icon> 交易（tx）
+        </div>
+        <div class="log-list">
+          <template v-if="previewTxLogs.length">
             <div
-              v-for="(line, i) in previewLogs"
-              :key="i"
+              v-for="(line, i) in previewTxLogs"
+              :key="'tx-'+i"
               :class="[
                 'log-line',
                 line.includes('ERROR') ? 'log-error' :
@@ -192,10 +202,61 @@ function onImgError(u: string) {
               {{ line }}
             </div>
           </template>
-          <div v-else class="log-empty">暂无日志</div>
+          <div v-else class="log-empty">暂无 tx 日志</div>
         </div>
-      </v-card-text>
-    </v-card>
+      </section>
+
+      <!-- NODE -->
+      <section class="log-col">
+        <div class="col-title">
+          <v-icon size="16" class="mr-1">mdi-lan</v-icon> 节点（node）
+        </div>
+        <div class="log-list">
+          <template v-if="previewNodeLogs.length">
+            <div
+              v-for="(line, i) in previewNodeLogs"
+              :key="'node-'+i"
+              :class="[
+                'log-line',
+                line.includes('ERROR') ? 'log-error' :
+                line.includes('WARN')  ? 'log-warn'  :
+                line.includes('INFO')  ? 'log-info'  : ''
+              ]"
+            >
+              {{ line }}
+            </div>
+          </template>
+          <div v-else class="log-empty">暂无 node 日志</div>
+        </div>
+      </section>
+
+      <!-- SYSTEM -->
+      <section class="log-col">
+        <div class="col-title">
+          <v-icon size="16" class="mr-1">mdi-cog</v-icon> 系统（system）
+        </div>
+        <div class="log-list">
+          <template v-if="previewSystemLogs.length">
+            <div
+              v-for="(line, i) in previewSystemLogs"
+              :key="'sys-'+i"
+              :class="[
+                'log-line',
+                line.includes('ERROR') ? 'log-error' :
+                line.includes('WARN')  ? 'log-warn'  :
+                line.includes('INFO')  ? 'log-info'  : ''
+              ]"
+            >
+              {{ line }}
+            </div>
+          </template>
+          <div v-else class="log-empty">暂无 system 日志</div>
+        </div>
+      </section>
+    </div>
+  </v-card-text>
+</v-card>
+
 
     <div class="actions">
       <v-btn class="mono-btn" @click="downloadTxDetails" variant="flat">
@@ -311,5 +372,49 @@ function onImgError(u: string) {
 @media (max-height: 740px) {
   .chart-wrap { max-height: 24vh; min-height: 160px; }
   .logs       { max-height: 28vh; min-height: 140px; }
+}
+
+/* 三栏网格容器 */
+.logs3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+/* 单栏外框（复用深色风格） */
+.log-col {
+  background: #0b1020;
+  color: #e6e8ee;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* 栏目标题 */
+.col-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+/* 列表区域（高度与原来一致） */
+.log-list {
+  max-height: 32vh;
+  min-height: 160px;
+  overflow: auto;
+  padding: 10px 12px;
+  line-height: 1.4;
+}
+
+/* 响应式：窄屏自动折行 */
+@media (max-width: 1200px) {
+  .logs3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .logs3 { grid-template-columns: 1fr; }
 }
 </style>
