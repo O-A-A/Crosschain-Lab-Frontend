@@ -38,7 +38,7 @@ const toggleTheme = () => {
         <nav class="d-none d-md-flex ml-8 nav">
           <RouterLink to="/" class="text-body-2 mr-4">启动实验</RouterLink>
           <RouterLink to="/flow" class="text-body-2 mr-4">流程可视化</RouterLink>
-          <RouterLink to="/results" class="text-body-2">结果</RouterLink>
+          <RouterLink to="/results" class="text-body-2">日志与结果</RouterLink>
         </nav>
 
         <v-spacer></v-spacer>

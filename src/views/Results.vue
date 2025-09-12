@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useExperimentStore } from '../stores/experiment';
 import ResultsChart from '../components/ResultsChart.vue';
 import { saveAs } from 'file-saver';
 import { useLogStore } from '@/stores/logs';
-import { useRouter } from 'vue-router';  // 导入 useRouter
+import { useRouter } from 'vue-router';
 
 const store = useExperimentStore();
 const logStore = useLogStore();
 
 const router = useRouter();
-const goToResultChartPage = () => {
-  router.push('/draw'); // 跳转到结果图页面
-};
-
-
 
 // ===== 统计摘要（保留你的逻辑）=====
 const summary = computed(() => {
@@ -29,13 +24,13 @@ const summary = computed(() => {
   return { avg, p95, successRate };
 });
 
+// 图表是否有数据
+const hasChartData = computed(() => (store.data?.length ?? 0) > 0);
+
 // ===== 下载 Tx_Details.csv（保留你的逻辑）=====
 async function downloadTxDetails() {
-  const res = await fetch('http://localhost:8080/download_tx_details', {
-    method: 'GET',
-  });
+  const res = await fetch('http://localhost:8080/download_tx_details', { method: 'GET' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
   const blob = await res.blob();
   const cd = res.headers.get('content-disposition') || '';
   const m = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(cd);
@@ -47,36 +42,123 @@ async function downloadTxDetails() {
 // ===== 日志预览（改为从 logStore 取最近 20 行）=====
 const previewLogs = computed(() => logStore.previewLogs);
 
-// 点击“刷新”时，保持最近 N 行（没有历史 REST 接口时为 no-op）
+// 点击“刷新”时，保持最近 N 行
 async function refreshLogs() {
-  await logStore.fetchLogs(200);  // 获取最新的日志数据
+  await logStore.fetchLogs(200);
 }
 
+// ====== 图片展示逻辑 ======
+const PIC_BASE: string =
+  ((import.meta as any)?.env?.VITE_PIC_BASE as string | undefined) ??
+  'http://localhost:8080/drawpic';
 
+const FILES = [
+  'avg_latency_tt_20250911_113652_8171.png',
+  'latency_CTXNum_20250911_113730_0063.png',
+  'srt_tps_20250911_113806_2145.png',
+  'tps_latency_20250911_114059_4374.png',
+];
+
+const base = PIC_BASE.replace(/\/+$/, '');
+const urls = ref<string[]>(FILES.map(n => `${base}/${encodeURIComponent(n)}`));
+const loading = ref(false);
+
+function refreshPics() {
+  loading.value = true;
+  const t = Date.now();
+  urls.value = FILES.map(n => `${base}/${encodeURIComponent(n)}?t=${t}`);
+  setTimeout(() => (loading.value = false), 150);
+}
+
+function onImgError(u: string) {
+  const i = urls.value.indexOf(u);
+  if (i >= 0) urls.value.splice(i, 1);
+}
 </script>
 
 <template>
   <div class="page">
-    <h1>实验结果</h1>
+    <!-- ▼ 实验结果：改为 card + 图标的板块 -->
+    <v-card class="rounded-lg" elevation="1">
+      <v-card-title class="d-flex align-center">
+        <v-icon class="mr-2">mdi-chart-box</v-icon>
+        实验结果
+      </v-card-title>
 
-    <div class="cards">
-      <div class="card">
-        <div class="label">平均延迟</div>
-        <div class="val">{{ summary.avg }} ms</div>
-      </div>
-      <div class="card">
-        <div class="label">P95</div>
-        <div class="val">{{ summary.p95 }} ms</div>
-      </div>
-      <div class="card">
-        <div class="label">成功率</div>
-        <div class="val">{{ summary.successRate }} %</div>
-      </div>
-    </div>
+      <v-card-text>
+        <div class="cards">
+          <div class="card">
+            <div class="label">平均延迟</div>
+            <div class="val">{{ summary.avg }} ms</div>
+          </div>
+          <div class="card">
+            <div class="label">P95</div>
+            <div class="val">{{ summary.p95 }} ms</div>
+          </div>
+          <div class="card">
+            <div class="label">成功率</div>
+            <div class="val">{{ summary.successRate }} %</div>
+          </div>
+        </div>
 
-    <div class="chart-wrap">
-      <ResultsChart :data="store.data" />
-    </div>
+        <div v-if="hasChartData" class="chart-wrap">
+          <ResultsChart :data="store.data" />
+        </div>
+        <div v-else class="chart-placeholder">暂无图表数据</div>
+      </v-card-text>
+    </v-card>
+    <!-- ▲ 实验结果 -->
+
+    <!-- 结果图片 -->
+    <v-card class="rounded-lg mt-1 img-section" elevation="1">
+      <v-card-title class="d-flex align-center">
+        <v-icon class="mr-2">mdi-image-multiple</v-icon>
+        结果图片
+        <v-spacer />
+        <v-btn size="small" variant="text" @click="refreshPics" :loading="loading">
+          刷新
+          <v-icon end size="small">mdi-refresh</v-icon>
+        </v-btn>
+        <v-btn size="small" variant="text" :href="PIC_BASE" target="_blank">
+          打开目录
+          <v-icon end size="small">mdi-open-in-new</v-icon>
+        </v-btn>
+      </v-card-title>
+
+      <v-card-text>
+        <div v-if="!urls.length" class="empty">暂无可显示图片</div>
+        <div v-else class="grid">
+          <v-card v-for="u in urls" :key="u" class="img-card" elevation="0">
+            <div class="img-wrap">
+            <v-img
+              :src="u"
+              height="220"
+              contain
+              position="center"
+              @error="onImgError(u)"
+            >
+              <template #placeholder>
+                <div class="ph">加载中…</div>
+              </template>
+            </v-img>
+            </div>
+            <div class="img-actions">
+              <v-btn
+                size="x-small"
+                color="primary"
+                variant="outlined"
+                :href="u"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <v-icon start size="14">mdi-magnify-plus</v-icon>
+                原图
+              </v-btn>
+            </div>
+          </v-card>
+        </div>
+      </v-card-text>
+    </v-card>
 
     <!-- 日志预览（最近 20 行） -->
     <v-card class="rounded-lg mt-2" elevation="1">
@@ -100,8 +182,8 @@ async function refreshLogs() {
             <div
               v-for="(line, i) in previewLogs"
               :key="i"
-              :class="[ 
-                'log-line', 
+              :class="[
+                'log-line',
                 line.includes('ERROR') ? 'log-error' :
                 line.includes('WARN')  ? 'log-warn'  :
                 line.includes('INFO')  ? 'log-info'  : ''
@@ -119,40 +201,28 @@ async function refreshLogs() {
       <v-btn class="mono-btn" @click="downloadTxDetails" variant="flat">
         下载 Tx_Details.csv
       </v-btn>
-
-      <!-- 同时重置实验与日志，更干净 -->
       <v-btn class="mono-btn" @click="() => { store.reset(); logStore.reset(); }">
         重置
-      </v-btn>
-      
-      <v-btn class="mono-btn" @click="goToResultChartPage">
-        查看结果图
       </v-btn>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* 修正：calc 写法 */
 .page {
-  height: calc(100vh - 56px);
+  min-height: calc(100dvh - 56px);
+  overflow-y: auto;
   display: grid;
-  grid-template-rows:
-    auto
-    auto
-    minmax(180px, 28vh)
-    minmax(160px, 32vh)
-    auto;
+  grid-auto-rows: auto;
   row-gap: 12px;
-  overflow: hidden;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
 }
 
 .cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 12px;
-  margin: 8px 0 0;
+  margin: 4px 0 0; /* 更紧凑一点 */
 }
 
 .card {
@@ -165,15 +235,55 @@ async function refreshLogs() {
 .label { opacity: 0.7; font-size: 13px; }
 .val { font-size: 20px; font-weight: 800; margin-top: 6px; }
 
+/* 图表容器：有数据时占建议高度；无数据时由占位文本撑开 */
 .chart-wrap {
-  height: 28vh;
+  max-height: 28vh;
   min-height: 180px;
   overflow: hidden;
   border-radius: 12px;
+  margin-top: 8px;
+}
+.chart-placeholder {
+  opacity: .6;
+  font-size: 12px;
+  margin-top: 8px;
 }
 
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+/* 原来的 .img-card 改成这样 */
+.img-card {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;          /* 白底 */
+  border: 1px solid #000;    /* 黑色边框 */
+}
+
+/* 可选：确保图片未铺满时底色仍是白的 */
+.img-wrap {
+  background: #fff;
+}
+.img-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 8px 8px;
+  font-size: 12px;
+}
+.ph {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100%;
+  opacity:.6;
+  font-size:12px;
+}
+.empty { opacity:.8; }
+
 .logs {
-  height: 32vh;
+  max-height: 32vh;
   min-height: 160px;
   overflow: auto;
   background: #0b1020;
@@ -196,15 +306,10 @@ async function refreshLogs() {
   align-items: center;
 }
 
+.img-section { margin-top: 4px !important; }
+
 @media (max-height: 740px) {
-  .page {
-    grid-template-rows:
-      auto auto
-      minmax(160px, 24vh)
-      minmax(140px, 28vh)
-      auto;
-  }
-  .chart-wrap { height: 24vh; min-height: 160px; }
-  .logs       { height: 28vh; min-height: 140px; }
+  .chart-wrap { max-height: 24vh; min-height: 160px; }
+  .logs       { max-height: 28vh; min-height: 140px; }
 }
 </style>
