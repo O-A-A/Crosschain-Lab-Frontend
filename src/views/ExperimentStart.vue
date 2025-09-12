@@ -3,7 +3,7 @@ import ExperimentForm from '../components/ExperimentForm.vue';
 import { useExperimentStore } from '../stores/experiment';
 import { useRouter } from 'vue-router';
 import type { ExperimentParams, ChainKey, AllowedParam } from '@/types';
-import { startSystem, changeParam ,getParams} from '@/services/api';
+import { startSystem, changeParam} from '@/services/api';
 
 
 const store = useExperimentStore();
@@ -37,13 +37,8 @@ async function handleChangeParams(p: ExperimentParams) {
       console.log(`参数 ${op.param} 的响应:`, response);
     }
 
-    // —— 读回确认（强烈建议先做一次）
-    const [srcNow, dstNow] = await Promise.all([
-      getParams('src_chain'),
-      getParams('dst_chain'),
-    ]);
-    console.log('[verify] src_chain 参数:', srcNow.data);
-    console.log('[verify] dst_chain 参数:', dstNow.data);
+    
+   
 
     // —— 全部 OK 后再写入 store，避免触发 watcher 并发写
     store.$patch({ params: p });

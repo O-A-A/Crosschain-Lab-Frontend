@@ -1,7 +1,17 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useTheme } from 'vuetify'
+import { onMounted } from 'vue'
+import { useLogStore } from '@/stores/logs'
 
+const logStore = useLogStore()
+
+onMounted(() => {
+  // 如果有 JWT
+  logStore.jwtToken = localStorage.getItem('token') || ''
+  // 全局只连一次
+  logStore.startSSE()
+})
 const theme = useTheme()
 
 // 暗黑模式

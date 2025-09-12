@@ -59,7 +59,7 @@ const formatTime = (ms: number): string => {
   if (!ms || Number.isNaN(ms)) return '';
   return new Date(ms).toLocaleString();
 };
-
+/*
 // 进入页面先拉一次，并开启轮询；离开页面清理轮询
 let pollTimer: number | undefined;
 
@@ -86,7 +86,7 @@ onMounted(() => {
 onUnmounted(() => {
   stopPolling();
 });
-
+*/
 // 固定 8 个字段，始终渲染 8 个框
 const TS_FIELDS = ['ccTIS', 'ccTL', 'ccTLC', 'ccTLS', 'ccTSD', 'ccTID', 'ccTM', 'ccTMC'] as const;
 type TsKey = typeof TS_FIELDS[number];

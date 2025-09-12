@@ -93,11 +93,3 @@ export async function getTxDetails(tx_hash: string): Promise<Record<string, numb
   }
 }
 
-export async function getParams(chain: ChainKey) {
-  try {
-    const { data } = await http.get('/get_params', { params: { chain } });
-    return data; // { Block_Interval, MaxBlockSize_global, InjectSpeed, TotalDataSize, ... }
-  } catch (err) {
-    throw new Error(toErrorMessage(err));
-  }
-}

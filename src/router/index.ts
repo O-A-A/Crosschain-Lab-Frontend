@@ -4,6 +4,7 @@ const ExperimentStart = () => import('../views/ExperimentStart.vue');
 const Flow = () => import('../views/Flow.vue');
 const Results = () => import('../views/Results.vue');
 const Logs = () => import('../views/Logs.vue');
+const Draw = () => import('../views/Draw.vue');
 
 export default createRouter({
   history: createWebHistory(),
@@ -12,5 +13,6 @@ export default createRouter({
     { path: '/flow', name: 'flow', component: Flow }, // 添加了 name 属性
     { path: '/results', component: Results },
     { path: '/logs', component: Logs },  
+    { path: '/draw', component: Draw },
   ],
 });

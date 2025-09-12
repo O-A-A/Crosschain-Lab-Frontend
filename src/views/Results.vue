@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { computed,onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted } from 'vue';
 import { useExperimentStore } from '../stores/experiment';
 import ResultsChart from '../components/ResultsChart.vue';
 import { saveAs } from 'file-saver';
+import { useLogStore } from '@/stores/logs';
+import { useRouter } from 'vue-router';  // 导入 useRouter
 
 const store = useExperimentStore();
+const logStore = useLogStore();
 
+const router = useRouter();
+const goToResultChartPage = () => {
+  router.push('/draw'); // 跳转到结果图页面
+};
+
+
+
+// ===== 统计摘要（保留你的逻辑）=====
 const summary = computed(() => {
   const arr = store.data;
   if (!arr.length) return { avg: 0, p95: 0, successRate: 0 };
@@ -18,56 +29,33 @@ const summary = computed(() => {
   return { avg, p95, successRate };
 });
 
+// ===== 下载 Tx_Details.csv（保留你的逻辑）=====
 async function downloadTxDetails() {
   const res = await fetch('http://localhost:8080/download_tx_details', {
     method: 'GET',
-    // 若需要携带 cookie 再加：credentials: 'include'
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const blob = await res.blob();
-
-  // 从 Content-Disposition 里取文件名（后端已暴露该响应头）
   const cd = res.headers.get('content-disposition') || '';
   const m = /filename\*=UTF-8''([^;]+)|filename="?([^"]+)"?/i.exec(cd);
   const raw = m?.[1] || m?.[2] || `Tx_Details_${Date.now()}.csv`;
   const filename = decodeURIComponent(raw);
-
   saveAs(blob, filename);
 }
 
-// —— 日志预览（最近 20 行），store.logs 不存在也不报错 ——
-const previewLogs = computed(() => {
-  const lines = (store as any).logs ?? [];
-  return lines.slice(-20);
-});
+// ===== 日志预览（改为从 logStore 取最近 20 行）=====
+const previewLogs = computed(() => logStore.previewLogs);
 
-// 可选：从后端拉日志（需要在 experimentStore 里实现 fetchLogs）
+// 点击“刷新”时，保持最近 N 行（没有历史 REST 接口时为 no-op）
 async function refreshLogs() {
-  try {
-    if (typeof (store as any).fetchLogs === 'function') {
-      await (store as any).fetchLogs();
-    }
-  } catch (e) {
-    console.error('刷新日志失败：', e);
-  }
+  await logStore.fetchLogs(200);  // 获取最新的日志数据
 }
-
-onMounted(() => {
-  // 页面打开就开始产生日志，并拉一批初始日志
-  (store as any).startMockLogs?.()
-  ;(store as any).fetchLogs?.()
-})
-onUnmounted(() => {
-  // 离开页面停止
-  (store as any).stopMockLogs?.()
-})
 
 
 </script>
 
 <template>
-  <!-- ✅ 改 1：给根节点加 .page，配合 100vh 布局 -->
   <div class="page">
     <h1>实验结果</h1>
 
@@ -76,22 +64,17 @@ onUnmounted(() => {
         <div class="label">平均延迟</div>
         <div class="val">{{ summary.avg }} ms</div>
       </div>
-
       <div class="card">
         <div class="label">P95</div>
         <div class="val">{{ summary.p95 }} ms</div>
       </div>
-
       <div class="card">
         <div class="label">成功率</div>
         <div class="val">{{ summary.successRate }} %</div>
       </div>
     </div>
 
-    <!-- ✅ 改 2：给图表包一层固定高度容器，防止撑高页面 -->
     <div class="chart-wrap">
-      
-
       <ResultsChart :data="store.data" />
     </div>
 
@@ -117,8 +100,8 @@ onUnmounted(() => {
             <div
               v-for="(line, i) in previewLogs"
               :key="i"
-              :class="[
-                'log-line',
+              :class="[ 
+                'log-line', 
                 line.includes('ERROR') ? 'log-error' :
                 line.includes('WARN')  ? 'log-warn'  :
                 line.includes('INFO')  ? 'log-info'  : ''
@@ -127,7 +110,6 @@ onUnmounted(() => {
               {{ line }}
             </div>
           </template>
-
           <div v-else class="log-empty">暂无日志</div>
         </div>
       </v-card-text>
@@ -138,34 +120,39 @@ onUnmounted(() => {
         下载 Tx_Details.csv
       </v-btn>
 
-      <v-btn class="mono-btn" @click="store.reset()">
+      <!-- 同时重置实验与日志，更干净 -->
+      <v-btn class="mono-btn" @click="() => { store.reset(); logStore.reset(); }">
         重置
+      </v-btn>
+      
+      <v-btn class="mono-btn" @click="goToResultChartPage">
+        查看结果图
       </v-btn>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* ✅ 用 100vh 网格布局，控制各区块高度，确保一屏展示 */
+/* 修正：calc 写法 */
 .page {
-  height: 100vh - 56px;
+  height: calc(100vh - 56px);
   display: grid;
   grid-template-rows:
-    auto               /* 标题 */
-    auto               /* 统计卡片 */
-    minmax(180px, 28vh)/* 图表区：随屏高变化 */
-    minmax(160px, 32vh)/* 日志区：内部滚动 */
-    auto;              /* 操作按钮 */
+    auto
+    auto
+    minmax(180px, 28vh)
+    minmax(160px, 32vh)
+    auto;
   row-gap: 12px;
-  overflow: hidden;     /* 禁止整页滚动，由子块自己处理 */
-  padding-bottom: 8px;  /* 给底部按钮留点空间 */
+  overflow: hidden;
+  padding-bottom: 8px;
 }
 
 .cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr));
   gap: 12px;
-  margin: 8px 0 0; /* 稍微收紧，减少总高度 */
+  margin: 8px 0 0;
 }
 
 .card {
@@ -178,19 +165,17 @@ onUnmounted(() => {
 .label { opacity: 0.7; font-size: 13px; }
 .val { font-size: 20px; font-weight: 800; margin-top: 6px; }
 
-/* ✅ 图表容器固定高度，内部由图表自适应 */
 .chart-wrap {
-  height: 28vh;              /* 与上面的 grid 行一致 */
+  height: 28vh;
   min-height: 180px;
-  overflow: hidden;          /* 防止图表溢出触发整页滚动 */
+  overflow: hidden;
   border-radius: 12px;
 }
 
-/* ✅ 日志区域：固定高度 + 内部滚动，不撑高页面 */
 .logs {
-  height: 32vh;              /* 与上面的 grid 行一致 */
+  height: 32vh;
   min-height: 160px;
-  overflow: auto;            /* 只在日志里滚动 */
+  overflow: auto;
   background: #0b1020;
   color: #e6e8ee;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
@@ -205,14 +190,12 @@ onUnmounted(() => {
 .log-info  { color: #4cd137; }
 .log-empty { opacity: 0.7; font-size: 12px; }
 
-/* 操作区 */
 .actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-/* ✅ 小屏/矮屏优化，自动收紧图表 & 日志高度，避免溢出 */
 @media (max-height: 740px) {
   .page {
     grid-template-rows:

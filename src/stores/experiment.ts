@@ -31,9 +31,7 @@ export const useExperimentStore = defineStore('experiment', {
     // 内部计时器（仅前端mock用）
     _mockTimer: null as number | null,
 
-    logs: [] as string[],           // 日志
-    logsLoading: false as boolean,  // 日志加载状态
-    logsError: null as string | null, // 日志错误信息
+
 
     // 修改后的实验参数
     blockInterval_src: '',  // 源链 Block Interval
@@ -134,82 +132,7 @@ export const useExperimentStore = defineStore('experiment', {
       }
     },
 
-    // 生成一行模拟日志
-    _makeMockLine(): string {
-      const levels = ['INFO', 'WARN', 'ERROR'] as const;
-      const level = levels[Math.random() < 0.75 ? 0 : (Math.random() < 0.6 ? 1 : 2)];
-      const now = new Date().toISOString();
-      const msgs = {
-        INFO: [
-          'Experiment tick ok',
-          'Sending tx to dst chain',
-          'Batch committed',
-          'Peer heartbeat',
-          'Latency sampled',
-        ],
-        WARN: [
-          'High latency detected',
-          'Peer #3 slow response',
-          'Retrying request',
-          'Queue depth increasing',
-        ],
-        ERROR: [
-          'RPC timeout',
-          'Signature verify failed',
-          'Tx dropped',
-          'Storage write error',
-        ],
-      };
-      const msg = level === 'INFO'
-        ? msgs.INFO[Math.floor(Math.random() * msgs.INFO.length)]
-        : level === 'WARN'
-          ? msgs.WARN[Math.floor(Math.random() * msgs.WARN.length)]
-          : msgs.ERROR[Math.floor(Math.random() * msgs.ERROR.length)];
-      const extra = `lat=${(Math.random() * 200 + 20).toFixed(1)}ms node=${Math.ceil(Math.random() * 5)}`;
-      return `[${now}] ${level} ${msg} (${extra})`;
-    },
-
-    // 仅前端：开始持续产生日志
-    startMockLogs(intervalMs = 300) {
-      if (this._mockTimer) return;
-      this._mockTimer = window.setInterval(() => {
-        this.appendLog(this._makeMockLine());
-      }, intervalMs);
-    },
-
-    // 仅前端：停止产生日志
-    stopMockLogs() {
-      if (this._mockTimer) {
-        clearInterval(this._mockTimer);
-        this._mockTimer = null;
-      }
-    },
-
-    // 仅前端：一次性“拉取”一些日志（供“刷新”按钮用）
-    async fetchLogs(limit = 200) {
-      this.logsLoading = true;
-      this.logsError = null;
-      try {
-        const lines: string[] = [];
-        for (let i = 0; i < limit; i++) lines.push(this._makeMockLine());
-        this.setLogs(lines);
-      } catch (e: any) {
-        this.logsError = e?.message || '获取日志失败';
-      } finally {
-        this.logsLoading = false;
-      }
-    },
-
-    // 本地操作：设置/追加/清空
-    setLogs(lines: string[]) {
-      this.logs = Array.isArray(lines) ? lines.slice(-5000) : [];
-    },
-    appendLog(line: string) {
-      this.logs.push(line);
-      const MAX = 5000;
-      if (this.logs.length > MAX) this.logs.splice(0, this.logs.length - MAX);
-    },
-    clearLogs() { this.logs = []; },
+    
 
     reset() {
       this.status = 'idle';
