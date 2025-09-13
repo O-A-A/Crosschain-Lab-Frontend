@@ -5,7 +5,7 @@ import ResultsChart from '../components/ResultsChart.vue';
 import { saveAs } from 'file-saver';
 import { useLogStore } from '@/stores/logs';
 import { useRouter } from 'vue-router';
-
+import * as api from '../services/api.ts';
 const store = useExperimentStore();
 const logStore = useLogStore();
 
@@ -50,6 +50,47 @@ const previewSystemLogs = computed(() => (logStore.systemLogs ?? []).slice(-20))
 async function refreshLogs() {
   await logStore.fetchLogs(200);
 }
+
+const drawing = ref(false);
+
+// 统一的“重绘四图 + 刷新图片”函数
+async function redrawAndRefresh() {
+  drawing.value = true;
+  try {
+    // 统一参数（或在这里按图区分）
+    const paramsByChart = {
+      tps_latency:   { label: 'Method A', color: '#277DA1' },
+      srt_tps:       { label: 'Method A', color: '#277DA1' },
+      latency_CTXNum:{ label: 'Method A', color: '#277DA1' },
+      avg_latency_tt:{ label: 'Method A', color: '#277DA1' },
+    };
+    await api.drawAllCharts(paramsByChart);
+
+    // 给后端一点落盘时间（可视情况调小/去掉）
+    await new Promise(r => setTimeout(r, 200));
+
+    // 你的已有逻辑：为4张图片 URL 加时间戳强刷
+    refreshPics();
+  } finally {
+    drawing.value = false;
+  }
+}
+
+// 你已有 isRunning；这里再监听一次 store.status 更稳妥
+watch(() => store.status, (now, prev) => {
+  if (prev === 'running' && now === 'finished') {
+    // 稍等片刻再请求后端重绘，避免竞态
+    setTimeout(() => { redrawAndRefresh(); }, 300);
+  }
+});
+
+// 进入页面时如果已经结束，自动跑一次
+onMounted(() => {
+  if (store.status === 'finished') {
+    redrawAndRefresh();
+  }
+});
+
 
 
 // —— 假定 store 里有 running / isRunning 标志；兼容两种命名 —— 
@@ -100,37 +141,7 @@ function onImgError(u: string) {
 </script>
 
 <template>
-  <div class="page">
-    <!-- ▼ 实验结果：改为 card + 图标的板块 -->
-    <v-card class="rounded-lg" elevation="1">
-      <v-card-title class="d-flex align-center">
-        <v-icon class="mr-2">mdi-chart-box</v-icon>
-        实验结果
-      </v-card-title>
-
-      <v-card-text>
-        <div class="cards">
-          <div class="card">
-            <div class="label">平均延迟</div>
-            <div class="val">{{ summary.avg }} ms</div>
-          </div>
-          <div class="card">
-            <div class="label">P95</div>
-            <div class="val">{{ summary.p95 }} ms</div>
-          </div>
-          <div class="card">
-            <div class="label">成功率</div>
-            <div class="val">{{ summary.successRate }} %</div>
-          </div>
-        </div>
-
-        <div v-if="hasChartData" class="chart-wrap">
-          <ResultsChart :data="store.data" />
-        </div>
-        <div v-else class="chart-placeholder">暂无图表数据</div>
-      </v-card-text>
-    </v-card>
-    <!-- ▲ 实验结果 -->
+  
 
     <!-- 结果图片 -->
     <v-card class="rounded-lg mt-1 img-section" elevation="1">
@@ -142,10 +153,7 @@ function onImgError(u: string) {
           刷新
           <v-icon end size="small">mdi-refresh</v-icon>
         </v-btn>
-        <v-btn size="small" variant="text" :href="PIC_BASE" target="_blank">
-          打开目录
-          <v-icon end size="small">mdi-open-in-new</v-icon>
-        </v-btn>
+        
       </v-card-title>
 
       <v-card-text>
@@ -285,7 +293,7 @@ function onImgError(u: string) {
         重置
       </v-btn>
     </div>
-  </div>
+  
 </template>
 
 <style scoped>

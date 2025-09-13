@@ -132,7 +132,15 @@ export const useExperimentStore = defineStore('experiment', {
       }
     },
 
-    
+    handleSystemLog(msg: string) {
+      if (!msg) return;
+      // 关键日志触发结束
+      if (msg.includes('All transactions are completed. Now to shut down.')) {
+        if (this.status === 'running') {
+          this.finish(); // 自动结束实验
+        }
+      }
+    },
 
     reset() {
       this.status = 'idle';

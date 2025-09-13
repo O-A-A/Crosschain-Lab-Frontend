@@ -68,6 +68,18 @@ export async function changeParam(opts: {
     throw new Error(toErrorMessage(err));
   }
 }
+
+
+/** 读取后端当前所有链参数 */
+export async function getAllParams(): Promise<{
+  src_chain: { Block_Interval: number; MaxBlockSize_global: number; TotalDataSize: number; InjectSpeed: number; };
+  dst_chain: { Block_Interval: number; MaxBlockSize_global: number; TotalDataSize: number; InjectSpeed: number; };
+}> {
+  const { data } = await axios.get('http://localhost:8080/get_all_params');
+  return data;
+}
+
+
 /**
  * 根据交易哈希获取时间戳详情
  * GET /tx_details?tx_hash=0x123abc
@@ -93,3 +105,25 @@ export async function getTxDetails(tx_hash: string): Promise<Record<string, numb
   }
 }
 
+const API_BASE =
+  (import.meta as any)?.env?.VITE_API_BASE ?? 'http://localhost:8080';
+
+export type ChartName = 'tps_latency' | 'srt_tps' | 'latency_CTXNum' | 'avg_latency_tt';
+
+export async function drawChart(chart: ChartName, params: Record<string, any>) {
+  const res = await fetch(`${API_BASE}/draw`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chart, params }),
+  });
+  if (!res.ok) throw new Error(`draw ${chart} HTTP ${res.status}`);
+  // 如果后端返回 json 可以读取；不需要也可以直接返回
+  return res.json().catch(() => ({}));
+}
+
+export async function drawAllCharts(paramsByChart: Partial<Record<ChartName, any>> | any) {
+  const charts: ChartName[] = ['tps_latency', 'srt_tps', 'latency_CTXNum', 'avg_latency_tt'];
+  // 允许统一 params 或者按图分别传
+  const tasks = charts.map((c) => drawChart(c, paramsByChart[c] ?? paramsByChart));
+  await Promise.all(tasks);
+}

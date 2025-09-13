@@ -1,6 +1,6 @@
 // src/stores/logs.ts
 import { defineStore } from 'pinia';
-
+import { useExperimentStore } from './experiment';
 export type LogKind = 'tx' | 'node' | 'system';
 const MAX_KEEP = 5000;
 const API_BASE: string =
@@ -73,6 +73,14 @@ export const useLogStore = defineStore('logs', {
     // }
 
     // ========== 本地操作 ==========
+    
+    // ✅ 新增/保留：系统日志到来时，先喂给实验仓库做结束检测，再入库
+onSystemLog(line: string) {
+  const expStore = useExperimentStore();
+  expStore.handleSystemLog(line);   // 让 experiment store 有机会切到 finished
+  this.systemLogs.push(line);       // 保留原始系统日志
+},
+
 
     setLogs(lines: string[]) {
       this.logs = Array.isArray(lines) ? lines.slice(-MAX_KEEP) : [];
@@ -94,27 +102,34 @@ export const useLogStore = defineStore('logs', {
     },
 
     // ========== SSE 对接 ==========
+  
+    // ✅ startSSE：把 system.onmessage 改成同时调用 onSystemLog + 入库（带格式）
+startSSE(opts?: { base?: string; token?: string; withCredentials?: boolean }) {
+  if (this._sse.tx || this._sse.node || this._sse.system) return;
 
-    startSSE(opts?: { base?: string; token?: string; withCredentials?: boolean }) {
-      if (this._sse.tx || this._sse.node || this._sse.system) return;
+  const base = opts?.base ?? API_BASE;
+  const token = opts?.token ?? this.jwtToken ?? '';
+  const qs = token ? `?token=${encodeURIComponent(token)}` : '';
+  const mk = (path: string) =>
+    new EventSource(`${base}${path}${qs}`, { withCredentials: !!opts?.withCredentials });
 
-      const base = opts?.base ?? API_BASE;
-      const token = opts?.token ?? this.jwtToken ?? '';
-      const qs = token ? `?token=${encodeURIComponent(token)}` : '';
-      const mk = (path: string) => new EventSource(`${base}${path}${qs}`, { withCredentials: !!opts?.withCredentials });
+  this._sse.tx = mk('/tx_stream');
+  this._sse.tx.onmessage = (ev) => this._appendKind('tx', this._formatTx(ev.data));
+  this._sse.tx.onerror   = (err) => { console.error('[SSE tx] error', err); this.logsError = '交易日志流中断'; };
 
-      this._sse.tx = mk('/tx_stream');
-      this._sse.tx.onmessage = (ev) => this._appendKind('tx', this._formatTx(ev.data));
-      this._sse.tx.onerror = (err) => { console.error('[SSE tx] error', err); this.logsError = '交易日志流中断'; };
+  this._sse.node = mk('/node_log_stream');
+  this._sse.node.onmessage = (ev) => this._appendKind('node', this._formatNode(ev.data));
+  this._sse.node.onerror   = (err) => { console.error('[SSE node] error', err); this.logsError = '节点日志流中断'; };
 
-      this._sse.node = mk('/node_log_stream');
-      this._sse.node.onmessage = (ev) => this._appendKind('node', this._formatNode(ev.data));
-      this._sse.node.onerror = (err) => { console.error('[SSE node] error', err); this.logsError = '节点日志流中断'; };
-
-      this._sse.system = mk('/system_log_stream');
-      this._sse.system.onmessage = (ev) => this._appendKind('system', this._formatSystem(ev.data));
-      this._sse.system.onerror = (err) => { console.error('[SSE system] error', err); this.logsError = '系统日志流中断'; };
-    },
+  // ⬇️ 这行原来只有 _appendKind，现在先走 onSystemLog 做“结束识别”
+  this._sse.system = mk('/system_log_stream');
+  this._sse.system.onmessage = (ev) => {
+    this.onSystemLog(ev.data);                 // 🔴 触发 handleSystemLog → finish()
+    this._appendKind('system', this._formatSystem(ev.data)); // 再把带时间戳的行放到界面
+  };
+  this._sse.system.onerror   = (err) => { console.error('[SSE system] error', err); this.logsError = '系统日志流中断'; };
+}
+,
 
     stopSSE() {
       try { this._sse.tx?.close(); } catch {}
@@ -147,6 +162,8 @@ export const useLogStore = defineStore('logs', {
         this.logsLoading = false;
       }
     },
+
+    
 
     // ========== 内部工具 ==========
 

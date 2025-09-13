@@ -133,8 +133,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref,watch  } from 'vue'
+import { ref,watch , onMounted } from 'vue'
 import type { ExperimentParams } from '../types'
+import { getAllParams } from '@/services/api'
 const syncDst = ref(true); // ✅ 勾选后把 src 值同步到 dst
 const emit = defineEmits<{
   /** 修改参数事件 */
@@ -156,9 +157,10 @@ const params = ref<ExperimentParams>({
   maxBlockSize_dst: '2000',
   injectSpeed_src: '8000',
   injectSpeed_dst: '8000',      // ✅ 补上
-  totalDataSize_src: '1',
-  totalDataSize_dst: '1',       // ✅ 补上
+  totalDataSize_src: '30000',
+  totalDataSize_dst: '30000',       // ✅ 补上
 })
+const hydrating = ref(false)
 
 // 勾选同步时，保持 *_dst 与 *_src 一致
 watch(
@@ -177,6 +179,30 @@ watch(
   },
   { immediate: true }
 )
+// ⬇️ 新增：从后端读取并填充
+async function loadParamsFromServer() {
+  try {
+    hydrating.value = true
+    const res = await getAllParams()
+    const s = res.src_chain
+    const d = res.dst_chain
+
+    // 把 number 转为字符串喂给 v-text-field（更稳）
+    params.value.blockInterval_src  = String(s.Block_Interval)
+    params.value.blockInterval_dst  = String(d.Block_Interval)
+    params.value.maxBlockSize_src   = String(s.MaxBlockSize_global)
+    params.value.maxBlockSize_dst   = String(d.MaxBlockSize_global)
+    params.value.injectSpeed_src    = String(s.InjectSpeed)
+    params.value.injectSpeed_dst    = String(d.InjectSpeed)
+    params.value.totalDataSize_src  = String(s.TotalDataSize)
+    params.value.totalDataSize_dst  = String(d.TotalDataSize)
+  } catch (e) {
+    console.error('[get_all_params] 读取失败：', e)
+  } finally {
+    // 放开 watcher 正常工作
+    hydrating.value = false
+  }
+}
 
 // 提交前再同步一次，确保数据完整
 function syncNow() {
@@ -197,6 +223,8 @@ function onChangeParams() {
 function onStartExperiment() {
   emit('start', params.value)
 }
+// ⬇️ 新增：进入页面即加载
+onMounted(loadParamsFromServer)
 </script>
 
 

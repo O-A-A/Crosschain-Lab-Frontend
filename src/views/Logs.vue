@@ -148,14 +148,30 @@ onMounted(() => {
 <style scoped>
 /* ====== 视口高度占满（可按实际导航栏高度调 var(--appbar-h)） ====== */
 :root { --appbar-h: 56px; } /* 你的顶部栏高；Vuetify 桌面常见是 64px */
-
 .page {
-  /* 原本是 min-height，改成明确高度以便内部 100% 生效 */
   height: calc(100dvh - var(--appbar-h));
-  overflow: hidden;           /* 避免外层再出现滚动条 */
+  overflow-y: auto;   /* 外层也能滚动 */
   padding-bottom: 0;
-  display: grid;
+  display: flex;      /* 不要用 grid 占满，直接 flex 即可 */
+  flex-direction: column;
 }
+
+/* 浏览器滚动条样式（全局作用，加上 :global 防止 scoped 屏蔽） */
+:global(::-webkit-scrollbar) {
+  width: 8px;
+  height: 8px;
+}
+:global(::-webkit-scrollbar-thumb) {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+}
+:global(::-webkit-scrollbar-thumb:hover) {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+:global(::-webkit-scrollbar-track) {
+  background-color: transparent;
+}
+
 
 /* 让卡片吃满 .page 高度 */
 .page > :deep(.v-card) {

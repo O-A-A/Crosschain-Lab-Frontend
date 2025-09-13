@@ -132,24 +132,7 @@ async function handleStart(p: ExperimentParams) {
   }
 }
 
-/* —— 演示：每 intervalMs 推入一条数据 —— */
-function mockStream() {
-  const params = store.params!;
-  let i = 0;
-  const timer = setInterval(() => {
-    if (i >= params.txCount || !store.isRunning) {
-      clearInterval(timer);
-      store.finish();
-      return;
-    }
-    store.pushPoint({
-      t: Date.now(),
-      latencyMs: Math.round(100 + Math.random() * 400),
-      success: Math.random() > 0.05,
-    });
-    i++;
-  }, (params as any).intervalMs);
-}
+
 </script>
 
 <template>
@@ -328,14 +311,29 @@ function mockStream() {
   text-align: center; /* 副标题居中 */
 }
 
-/* 金线下划线：低调亮点 */
-.title__main::after{
-  content:"";
-  position:absolute; left:50%; transform:translateX(-50%);
-  bottom:0; width: 200px; height: 2px; border-radius:2px;
-  background: linear-gradient(90deg,
-      transparent, hsl(45 90% 55% / .9), hsl(45 90% 55% / .9), transparent);
-  box-shadow: 0 0 16px hsl(45 90% 55% / .6);
+.title__main::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 200px;
+  height: 2px;
+  border-radius: 2px;
+
+  /* 橙金 + 蓝紫 渐变 */
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #F4A63C,  /* 橙金 */
+    #4B64D6,  /* 蓝紫 */
+    transparent
+  );
+
+  /* 两色柔光阴影 */
+  box-shadow:
+    0 0 12px #F4A63C88,
+    0 0 18px #4B64D688;
 }
 
 /* 表单卡片：窄、居中、干净 */
