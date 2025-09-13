@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch} from 'vue';
 import { useExperimentStore } from '../stores/experiment';
 import ResultsChart from '../components/ResultsChart.vue';
 import { saveAs } from 'file-saver';
@@ -51,16 +51,35 @@ async function refreshLogs() {
   await logStore.fetchLogs(200);
 }
 
+
+// —— 假定 store 里有 running / isRunning 标志；兼容两种命名 —— 
+const isRunning = computed<boolean>(() =>
+  (store as any).running ?? (store as any).isRunning ?? false
+)
+
+// —— 监听“运行中 -> 非运行”，在结束时延迟 500ms 拉图（给后端落盘时间）——
+watch(isRunning, (now, prev) => {
+  if (prev && !now) {
+    setTimeout(() => refreshPics(), 500)
+  }
+})
+
+// —— 如果进入页面时实验已结束，也自动拉一次 —— 
+onMounted(() => {
+  if (!isRunning.value) {
+    setTimeout(() => refreshPics(), 100)
+  }
+})
 // ====== 图片展示逻辑 ======
 const PIC_BASE: string =
   ((import.meta as any)?.env?.VITE_PIC_BASE as string | undefined) ??
   'http://localhost:8080/drawpic';
 
 const FILES = [
-  'avg_latency_tt_20250911_113652_8171.png',
-  'latency_CTXNum_20250911_113730_0063.png',
-  'srt_tps_20250911_113806_2145.png',
-  'tps_latency_20250911_114059_4374.png',
+  'avg_latency_tt.png',
+  'latency_CTXNum.png',
+  'srt_tps.png',
+  'tps_latency.png',
 ];
 
 const base = PIC_BASE.replace(/\/+$/, '');

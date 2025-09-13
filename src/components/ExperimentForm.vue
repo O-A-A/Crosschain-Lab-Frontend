@@ -7,24 +7,27 @@
         <!-- 卡片主体区域（表单输入控件） -->
         <v-card-text class="pa-0">
           <div class="grid">
-            <!-- 源链（PoW） -->
-            <v-text-field
-              label="源链"
-              v-model="params.srcChain"
-              variant="outlined"
-              disabled
-              density="default"
-              hide-details
-            />
-            <!-- 目标链（PoW） -->
-            <v-text-field
-              label="目标链"
-              v-model="params.dstChain"
-              variant="outlined"
-              disabled
-              density="default"
-              hide-details
-            />
+            <!-- ===== 源链 / 目标链：同一行 ===== -->
+<div class="row-2">
+  <!-- 源链（PoW） -->
+  <v-text-field
+    label="源链"
+    v-model="params.srcChain"
+    variant="outlined"
+    disabled
+    density="default"
+    hide-details
+  />
+  <!-- 目标链（PoW） -->
+  <v-text-field
+    label="目标链"
+    v-model="params.dstChain"
+    variant="outlined"
+    disabled
+    density="default"
+    hide-details
+  />
+</div>
             <!-- 跨链协议（CCP） -->
             <v-text-field
               label="跨链协议"
@@ -35,45 +38,49 @@
               hide-details
             />
 
-            <!-- 修改 Block Interval（源链） -->
-            <v-text-field
-              label="Block Interval（源链）"
-              v-model="params.blockInterval_src"
-              type="number"
-              variant="outlined"
-              density="default"
-              hide-details
-            />
+            <!-- ===== Block Interval（源/目标：同一行） ===== -->
+<div class="row-2">
+  <!-- 修改 Block Interval（源链） -->
+  <v-text-field
+    label="Block Interval（源链）"
+    v-model="params.blockInterval_src"
+    type="number"
+    variant="outlined"
+    density="default"
+    hide-details
+  />
+  <!-- 修改 Block Interval（目标链） -->
+  <v-text-field
+    label="Block Interval（目标链）"
+    v-model="params.blockInterval_dst"
+    type="number"
+    variant="outlined"
+    density="default"
+    hide-details
+  />
+</div>
 
-            <!-- 修改 Block Interval（目标链） -->
-            <v-text-field
-              label="Block Interval（目标链）"
-              v-model="params.blockInterval_dst"
-              type="number"
-              variant="outlined"
-              density="default"
-              hide-details
-            />
-
-            <!-- 修改 Max Block Size（源链） -->
-            <v-text-field
-              label="Max Block Size（源链）"
-              v-model="params.maxBlockSize_src"
-              type="number"
-              variant="outlined"
-              density="default"
-              hide-details
-            />
-
-            <!-- 修改 Max Block Size（目标链） -->
-            <v-text-field
-              label="Max Block Size（目标链）"
-              v-model="params.maxBlockSize_dst"
-              type="number"
-              variant="outlined"
-              density="default"
-              hide-details
-            />
+<!-- ===== Max Block Size（源/目标：同一行） ===== -->
+<div class="row-2">
+  <!-- 修改 Max Block Size（源链） -->
+  <v-text-field
+    label="Max Block Size（源链）"
+    v-model="params.maxBlockSize_src"
+    type="number"
+    variant="outlined"
+    density="default"
+    hide-details
+  />
+  <!-- 修改 Max Block Size（目标链） -->
+  <v-text-field
+    label="Max Block Size（目标链）"
+    v-model="params.maxBlockSize_dst"
+    type="number"
+    variant="outlined"
+    density="default"
+    hide-details
+  />
+</div>
 
             <!-- 修改 Inject Speed（源链） -->
             <v-text-field
@@ -196,12 +203,12 @@ function onStartExperiment() {
 <style scoped>
 /* 表单样式 */
 .wrap {
-  min-height: 100dvh;
+  height: 85dvh;
   display: grid;
   place-items: center;
-  padding: 32px;
+  padding: 16px;
   box-sizing: border-box;
-  overflow-y: auto;
+  overflow-y: hidden;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
@@ -209,6 +216,7 @@ function onStartExperiment() {
 .form {
   width: 100%;
   max-width: 720px;
+  align-self: start; /* 从垂直居中 -> 顶部 */
 }
 
 .form-card {
@@ -247,4 +255,17 @@ function onStartExperiment() {
   font-size: 1.1rem;
   border-radius: 12px !important;
 }
+/* 两列行容器：让成对字段在同一行显示；小屏自动换行 */
+.row-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 30px; /* 与 .grid 一致的间距体验 */
+}
+
+@media (max-width: 640px) {
+  .row-2 {
+    grid-template-columns: 1fr; /* 小屏堆叠 */
+  }
+}
+
 </style>

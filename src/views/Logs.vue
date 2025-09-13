@@ -146,31 +146,54 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* ====== 视口高度占满（可按实际导航栏高度调 var(--appbar-h)） ====== */
+:root { --appbar-h: 56px; } /* 你的顶部栏高；Vuetify 桌面常见是 64px */
+
 .page {
-  min-height: calc(100dvh - 56px);
-  overflow-y: auto;
+  /* 原本是 min-height，改成明确高度以便内部 100% 生效 */
+  height: calc(100dvh - var(--appbar-h));
+  overflow: hidden;           /* 避免外层再出现滚动条 */
+  padding-bottom: 0;
   display: grid;
-  grid-auto-rows: auto;
-  row-gap: 12px;
-  padding-bottom: 12px;
 }
 
-/* 三栏网格容器 */
+/* 让卡片吃满 .page 高度 */
+.page > :deep(.v-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 标题占固高，内容区自适应 */
+.page > :deep(.v-card-title) { flex: 0 0 auto; }
+.page > :deep(.v-card-text)  {
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0; /* 关键：允许子项在 flex 容器内收缩 */
+}
+
+/* 三栏网格占满内容区高度 */
 .logs3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
-/* 单栏外框（与结果页风格一致） */
+/* 每一栏：标题固定，列表填充剩余并滚动 */
 .log-col {
   background: #0b1020;
   color: #e6e8ee;
   border-radius: 12px;
   overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-/* 栏目标题 */
 .col-title {
   display: flex;
   align-items: center;
@@ -180,18 +203,19 @@ onMounted(() => {
   font-weight: 600;
   opacity: 0.9;
   border-bottom: 1px solid rgba(255,255,255,.06);
+  flex: 0 0 auto; /* 固定 */
 }
 
-/* 列表区域 */
+/* ⬇️ 关键：去掉你的 max-height/min-height，改为 flex 填充 + 内部滚动 */
 .log-list {
-  max-height: 70vh;
-  min-height: 240px;
-  overflow: auto;
+  flex: 1 1 auto;   /* 填充剩余高度 */
+  min-height: 0;    /* 允许在父级收缩 */
+  overflow: auto;   /* 列内滚动 */
   padding: 10px 12px;
   line-height: 1.4;
 }
 
-/* 复用等级颜色 */
+/* 行样式保留 */
 .log-line { white-space: pre-wrap; word-break: break-word; font-size: 12px; }
 .log-error { color: #ff6b6b; }
 .log-warn  { color: #fbc531; }
